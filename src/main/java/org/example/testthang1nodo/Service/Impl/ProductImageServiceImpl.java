@@ -11,13 +11,18 @@ import org.example.testthang1nodo.Service.ProductImageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class ProductImageServiceImpl implements ProductImageService {
+
+    private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList("image/jpeg", "image/png");
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
@@ -33,9 +38,20 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional
-    public ProductImageResponseDTO uploadImage(Long productId, MultipartFile file, String description, boolean isPrimary) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+    public ProductImageResponseDTO uploadImage(Long productId, MultipartFile file, String description, boolean isPrimary, String createdBy) {
+        Product product = productRepository.findByIdAndStatus(productId, "1")
+                .orElseThrow(() -> new RuntimeException("Product not found or deleted"));
+
+        // Kiểm tra file ảnh
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("Image file is required");
+        }
+        if (!ALLOWED_IMAGE_TYPES.contains(file.getContentType())) {
+            throw new RuntimeException("Invalid image format. Only JPEG and PNG are allowed");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RuntimeException("Image size exceeds 10MB limit");
+        }
 
         // Cập nhật trạng thái ảnh cũ nếu isPrimary = true
         if (isPrimary) {
@@ -43,7 +59,7 @@ public class ProductImageServiceImpl implements ProductImageService {
                     .forEach(image -> {
                         image.setStatus("0");
                         image.setModifiedDate(LocalDate.now());
-                        image.setModifiedBy("system");
+                        image.setModifiedBy(createdBy != null ? createdBy : "system");
                         productImageRepository.save(image);
                     });
         }
@@ -59,7 +75,7 @@ public class ProductImageServiceImpl implements ProductImageService {
         requestDTO.setIsPrimary(isPrimary);
         requestDTO.setStatus("1");
         requestDTO.setCreatedDate(LocalDate.now());
-        requestDTO.setCreatedBy("system");
+        requestDTO.setCreatedBy(createdBy != null ? createdBy : "system");
 
         ProductImage image = productImageMapper.toEntity(requestDTO);
         image.setProduct(product);
@@ -76,16 +92,16 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     public byte[] getImageData(Long imageId) {
-        ProductImage image = productImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Image not found"));
+        ProductImage image = productImageRepository.findByIdAndStatus(imageId, "1")
+                .orElseThrow(() -> new RuntimeException("Image not found or deleted"));
         return image.getImageData();
     }
 
     @Override
     @Transactional
     public void deleteImage(Long imageId) {
-        ProductImage image = productImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Image not found"));
+        ProductImage image = productImageRepository.findByIdAndStatus(imageId, "1")
+                .orElseThrow(() -> new RuntimeException("Image not found or deleted"));
         image.setStatus("0");
         image.setModifiedDate(LocalDate.now());
         image.setModifiedBy("system");

@@ -1,5 +1,4 @@
 package org.example.testthang1nodo.Service.Impl;
-
 import org.example.testthang1nodo.DTO.DTORequest.ProductRequestDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.ProductResponseDTO;
 import org.example.testthang1nodo.Entity.Product;
@@ -8,6 +7,7 @@ import org.example.testthang1nodo.Mapper.ProductMapper;
 import org.example.testthang1nodo.Service.ProductService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,8 +26,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO createProduct(ProductRequestDTO requestDTO) {
-        // Kiểm tra product_code duy nhất
-        if (productRepository.existsByProductCode(requestDTO.getProductCode())) {
+        if (productRepository.existsByProductCodeAndStatus(requestDTO.getProductCode(), "1")) {
             throw new RuntimeException("Product code already exists");
         }
 
@@ -38,14 +37,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDTO getProductById(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productRepository.findByIdAndStatus(id, "1")
+                .orElseThrow(() -> new RuntimeException("Product not found or deleted"));
         return productMapper.toResponseDTO(product);
     }
 
     @Override
     public List<ProductResponseDTO> getAllProducts() {
-        return productRepository.findAll().stream()
+        return productRepository.findByStatus("1").stream()
                 .map(productMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -53,12 +52,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO updateProduct(Long id, ProductRequestDTO requestDTO) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productRepository.findByIdAndStatus(id, "1")
+                .orElseThrow(() -> new RuntimeException("Product not found or deleted"));
 
-        // Kiểm tra product_code duy nhất (nếu thay đổi)
         if (!product.getProductCode().equals(requestDTO.getProductCode()) &&
-                productRepository.existsByProductCode(requestDTO.getProductCode())) {
+                productRepository.existsByProductCodeAndStatus(requestDTO.getProductCode(), "1")) {
             throw new RuntimeException("Product code already exists");
         }
 
@@ -69,7 +67,7 @@ public class ProductServiceImpl implements ProductService {
         product.setQuantity(requestDTO.getQuantity());
         product.setStatus(requestDTO.getStatus());
         product.setModifiedDate(LocalDate.now());
-        product.setModifiedBy(requestDTO.getModifiedBy());
+        product.setModifiedBy(requestDTO.getModifiedBy() != null ? requestDTO.getModifiedBy() : "system");
 
         Product updatedProduct = productRepository.save(product);
         return productMapper.toResponseDTO(updatedProduct);
@@ -78,10 +76,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void deleteProduct(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productRepository.findByIdAndStatus(id, "1")
+                .orElseThrow(() -> new RuntimeException("Product not found or deleted"));
         product.setStatus("0");
         product.setModifiedDate(LocalDate.now());
+        product.setModifiedBy("system");
         productRepository.save(product);
     }
 }

@@ -5,7 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface CategoryImageService {
-    CategoryImageResponseDTO uploadImage(Long categoryId, MultipartFile file, String description, boolean isPrimary);
+    public CategoryImageResponseDTO uploadImage(Long categoryId, MultipartFile file, String description, boolean isPrimary, String createdBy);
     List<CategoryImageResponseDTO> getImagesByCategoryId(Long categoryId);
     byte[] getImageData(Long imageId);
     void deleteImage(Long imageId);

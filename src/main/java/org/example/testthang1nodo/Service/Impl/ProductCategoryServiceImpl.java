@@ -13,6 +13,7 @@ import org.example.testthang1nodo.Mapper.ProductCategoryMapper;
 import org.example.testthang1nodo.Service.ProductCategoryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,12 +38,13 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     @Override
     @Transactional
     public ProductCategoryResponseDTO createProductCategory(ProductCategoryRequestDTO requestDTO) {
-        Product product = productRepository.findById(requestDTO.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-        Category category = categoryRepository.findById(requestDTO.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+        Product product = productRepository.findByIdAndStatus(requestDTO.getProductId(), "1")
+                .orElseThrow(() -> new RuntimeException("Product not found or deleted"));
+        Category category = categoryRepository.findByIdAndStatus(requestDTO.getCategoryId(), "1")
+                .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
 
-        if (productCategoryRepository.existsById(new ProductCategoryId(requestDTO.getProductId(), requestDTO.getCategoryId()))) {
+        ProductCategoryId id = new ProductCategoryId(requestDTO.getProductId(), requestDTO.getCategoryId());
+        if (productCategoryRepository.existsById(id)) {
             throw new RuntimeException("Product already in category");
         }
 
@@ -56,6 +58,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     @Override
     public List<ProductCategoryResponseDTO> getProductCategoriesByProductId(Long productId) {
         return productCategoryRepository.findByIdProductId(productId).stream()
+                .filter(pc -> pc.getProduct().getStatus().equals("1") && pc.getCategory().getStatus().equals("1"))
                 .map(productCategoryMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }

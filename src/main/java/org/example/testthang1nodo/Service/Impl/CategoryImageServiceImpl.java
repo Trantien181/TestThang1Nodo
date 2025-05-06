@@ -11,13 +11,18 @@ import org.example.testthang1nodo.Service.CategoryImageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class CategoryImageServiceImpl implements CategoryImageService {
+
+    private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList("image/jpeg", "image/png");
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     private final CategoryRepository categoryRepository;
     private final CategoryImageRepository categoryImageRepository;
@@ -33,16 +38,26 @@ public class CategoryImageServiceImpl implements CategoryImageService {
 
     @Override
     @Transactional
-    public CategoryImageResponseDTO uploadImage(Long categoryId, MultipartFile file, String description, boolean isPrimary) {
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+    public CategoryImageResponseDTO uploadImage(Long categoryId, MultipartFile file, String description, boolean isPrimary, String createdBy) {
+        Category category = categoryRepository.findByIdAndStatus(categoryId, "1")
+                .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
+
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("Image file is required");
+        }
+        if (!ALLOWED_IMAGE_TYPES.contains(file.getContentType())) {
+            throw new RuntimeException("Invalid image format. Only JPEG and PNG are allowed");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RuntimeException("Image size exceeds 10MB limit");
+        }
 
         if (isPrimary) {
             categoryImageRepository.findByCategoryIdAndIsPrimaryAndStatus(categoryId, true, "1")
                     .forEach(image -> {
                         image.setStatus("0");
                         image.setModifiedDate(LocalDate.now());
-                        image.setModifiedBy("system");
+                        image.setModifiedBy(createdBy != null ? createdBy : "system");
                         categoryImageRepository.save(image);
                     });
         }
@@ -58,7 +73,7 @@ public class CategoryImageServiceImpl implements CategoryImageService {
         requestDTO.setIsPrimary(isPrimary);
         requestDTO.setStatus("1");
         requestDTO.setCreatedDate(LocalDate.now());
-        requestDTO.setCreatedBy("system");
+        requestDTO.setCreatedBy(createdBy != null ? createdBy : "system");
 
         CategoryImage image = categoryImageMapper.toEntity(requestDTO);
         image.setCategory(category);
@@ -75,16 +90,16 @@ public class CategoryImageServiceImpl implements CategoryImageService {
 
     @Override
     public byte[] getImageData(Long imageId) {
-        CategoryImage image = categoryImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Image not found"));
+        CategoryImage image = categoryImageRepository.findByIdAndStatus(imageId, "1")
+                .orElseThrow(() -> new RuntimeException("Image not found or deleted"));
         return image.getImageData();
     }
 
     @Override
     @Transactional
     public void deleteImage(Long imageId) {
-        CategoryImage image = categoryImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Image not found"));
+        CategoryImage image = categoryImageRepository.findByIdAndStatus(imageId, "1")
+                .orElseThrow(() -> new RuntimeException("Image not found or deleted"));
         image.setStatus("0");
         image.setModifiedDate(LocalDate.now());
         image.setModifiedBy("system");
