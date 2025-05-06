@@ -3,6 +3,7 @@ package org.example.testthang1nodo.Entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.Hibernate;
@@ -22,6 +23,13 @@ public class ProductCategoryId implements Serializable {
     @NotNull
     @Column(name = "category_id", nullable = false)
     private Long categoryId;
+
+    public ProductCategoryId(@NotNull(message = "Product ID is required") @Positive(message = "Product ID must be positive") Long productId, @NotNull(message = "Category ID is required") @Positive(message = "Category ID must be positive") Long categoryId) {
+    }
+
+    public ProductCategoryId() {
+
+    }
 
     @Override
     public boolean equals(Object o) {
