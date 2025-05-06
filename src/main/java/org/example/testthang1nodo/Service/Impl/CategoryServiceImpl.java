@@ -1,11 +1,17 @@
 package org.example.testthang1nodo.Service.Impl;
 
 import org.example.testthang1nodo.DTO.DTORequest.CategoryRequestDTO;
+import org.example.testthang1nodo.DTO.DTORequest.ProductRequestDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
+import org.example.testthang1nodo.DTO.DTOResponse.ProductResponseDTO;
 import org.example.testthang1nodo.Entity.Category;
+import org.example.testthang1nodo.Entity.Product;
+import org.example.testthang1nodo.Mapper.ProductMapper;
 import org.example.testthang1nodo.Repository.CategoryRepository;
-import org.example.testthang1nodo.mapper.CategoryMapper;
-import org.example.testthang1nodo.service.CategoryService;
+import org.example.testthang1nodo.Mapper.CategoryMapper;
+import org.example.testthang1nodo.Repository.ProductRepository;
+import org.example.testthang1nodo.Service.CategoryService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -14,6 +20,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
+    @Autowired
+    ProductRepository productRepository;
+    @Autowired
+    ProductMapper productMapper;
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
@@ -47,6 +57,16 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.findAll().stream()
                 .map(categoryMapper::toResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO requestDTO) {
+        return null;
+    }
+
+    @Override
+    public void deleteCategory(Long id) {
+
     }
 
     @Override
