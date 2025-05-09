@@ -13,7 +13,7 @@ public interface CategoryImageMapper {
     CategoryImageResponseDTO toResponseDTO(CategoryImage categoryImage);
 
     // Request DTO -> Entity
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "category", ignore = true) // Category sẽ được set trong service
+//    @Mapping(target = "id", ignore = true)
+//    @Mapping(target = "category", ignore = true) // Category sẽ được set trong service
     CategoryImage toEntity(CategoryImageRequestDTO requestDTO);
 }

@@ -4,32 +4,48 @@ import jakarta.validation.Valid;
 import org.example.testthang1nodo.DTO.DTORequest.CategoryRequestDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryImageResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
+import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
 import org.example.testthang1nodo.Service.CategoryImageService;
 import org.example.testthang1nodo.Service.CategoryService;
+import org.example.testthang1nodo.Service.Impl.CategoryServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
 
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {
+    private static final Logger logger = LoggerFactory.getLogger(CategoryServiceImpl.class);
 
-    private final CategoryService categoryService;
-    private final CategoryImageService categoryImageService;
+    @Autowired
+    CategoryService categoryService;
+    @Autowired
+    CategoryImageService categoryImageService;
 
-    public CategoryController(CategoryService categoryService, CategoryImageService categoryImageService) {
-        this.categoryService = categoryService;
-        this.categoryImageService = categoryImageService;
-    }
-
-    @PostMapping
-    public ResponseEntity<CategoryResponseDTO> createCategory(@Valid @RequestBody CategoryRequestDTO requestDTO) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CategoryResponseDTO> createCategory(@Valid @ModelAttribute CategoryRequestDTO requestDTO) {
         CategoryResponseDTO response = categoryService.createCategory(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CategoryResponseDTO> updateCategory(
+            @PathVariable Long id,
+            @Valid @ModelAttribute CategoryRequestDTO requestDTO,
+            @RequestParam(value = "updateImageID") List<Long> updateImageIDs) {
+        CategoryResponseDTO response = categoryService.updateCategory(id, requestDTO, updateImageIDs);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -44,11 +60,6 @@ public class CategoryController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponseDTO> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryRequestDTO requestDTO) {
-        CategoryResponseDTO response = categoryService.updateCategory(id, requestDTO);
-        return ResponseEntity.ok(response);
-    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
@@ -85,5 +96,35 @@ public class CategoryController {
     public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) {
         categoryImageService.deleteImage(imageId);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/search")
+    public ResponseEntity<CategorySearchResponseDTO> searchCategories(
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "categoryCode", required = false) String categoryCode,
+            @RequestParam(value = "createdFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdFrom,
+            @RequestParam(value = "createdTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdTo,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        System.out.println(name+": "+categoryCode+": "+createdFrom+": "+createdTo);
+        CategorySearchResponseDTO response = categoryService.searchCategories(name, categoryCode, createdFrom, createdTo, page, size);
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCategories(
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "categoryCode", required = false) String categoryCode,
+            @RequestParam(value = "createdFrom", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createdFrom,
+            @RequestParam(value = "createdTo", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createdTo) {
+        logger.info("Exporting categories with params: name={}, categoryCode={}, createdFrom={}, createdTo={}",
+                name, categoryCode, createdFrom, createdTo);
+
+        ByteArrayOutputStream out = categoryService.exportCategoriesToExcel(name, categoryCode, createdFrom, createdTo);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=categories.xlsx");
+        headers.setContentLength(out.size());
+
+        return new ResponseEntity<>(out.toByteArray(), headers, HttpStatus.OK);
     }
 }

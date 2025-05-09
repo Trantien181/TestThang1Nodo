@@ -8,6 +8,9 @@ import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -50,10 +53,10 @@ public class Product {
 
     @NotNull
     @Column(name = "created_date", nullable = false)
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "modified_date")
-    private LocalDate modifiedDate;
+    private LocalDateTime modifiedDate;
 
     @Size(max = 100)
     @NotNull
@@ -63,5 +66,6 @@ public class Product {
     @Size(max = 100)
     @Column(name = "modified_by", length = 100)
     private String modifiedBy;
-
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    private List<ProductImage> images = new ArrayList<>();
 }

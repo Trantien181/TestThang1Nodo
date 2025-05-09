@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -22,19 +23,17 @@ public class ProductImageRequestDTO {
     @Size(min = 1, message = "Image data must not be empty")
     private byte[] imageData;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
-    private String description;
-
-    private Boolean isPrimary;
+    @Size(max = 1000, message = "name must not exceed 1000 characters")
+    private String name;
 
     @NotBlank(message = "Status is required")
     @Pattern(regexp = "[0-1]", message = "Status must be '0' or '1'")
     private String status;
 
     @NotNull(message = "Created date is required")
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
-    private LocalDate modifiedDate;
+    private LocalDateTime modifiedDate;
 
     @NotBlank(message = "Created by is required")
     @Size(max = 100, message = "Created by must not exceed 100 characters")

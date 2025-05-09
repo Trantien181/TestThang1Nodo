@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -12,12 +13,8 @@ import java.time.LocalDate;
 public class CategoryImageResponseDTO {
 
     private Long id;
-    private Long categoryId;
-    private String description;
-    private Boolean isPrimary;
+    private String name;
     private String status;
-    private LocalDate createdDate;
-    private LocalDate modifiedDate;
+    private LocalDateTime createdDate;
     private String createdBy;
-    private String modifiedBy;
 }

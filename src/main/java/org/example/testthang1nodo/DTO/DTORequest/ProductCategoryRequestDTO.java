@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -21,9 +22,9 @@ public class ProductCategoryRequestDTO {
     private Long categoryId;
 
     @NotNull(message = "Created date is required")
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
-    private LocalDate modifiedDate;
+    private LocalDateTime modifiedDate;
 
     @NotBlank(message = "Created by is required")
     @Size(max = 100, message = "Created by must not exceed 100 characters")

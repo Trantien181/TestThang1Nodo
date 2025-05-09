@@ -10,6 +10,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -32,12 +33,8 @@ public class ProductImage {
     private byte[] imageData;
 
     @Lob
-    @Column(name = "description")
-    private String description;
-
-    @ColumnDefault("0")
-    @Column(name = "is_primary")
-    private Boolean isPrimary;
+    @Column(name = "name")
+    private String name;
 
     @Size(max = 1)
     @NotNull
@@ -47,10 +44,10 @@ public class ProductImage {
 
     @NotNull
     @Column(name = "created_date", nullable = false)
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "modified_date")
-    private LocalDate modifiedDate;
+    private LocalDateTime modifiedDate;
 
     @Size(max = 100)
     @NotNull

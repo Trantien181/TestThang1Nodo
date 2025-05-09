@@ -10,6 +10,5 @@ import java.util.Optional;
 @Repository
 public interface CategoryImageRepository extends JpaRepository<CategoryImage, Long> {
     List<CategoryImage> findByCategoryIdAndStatus(Long categoryId, String status);
-    List<CategoryImage> findByCategoryIdAndIsPrimaryAndStatus(Long categoryId, boolean isPrimary, String status);
     Optional<CategoryImage> findByIdAndStatus(Long id, String status);
 }

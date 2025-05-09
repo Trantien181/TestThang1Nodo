@@ -1,11 +1,22 @@
 package org.example.testthang1nodo.DTO.DTORequest;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.testthang1nodo.Entity.Category;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -18,28 +29,16 @@ public class CategoryImageRequestDTO {
     @Positive(message = "Category ID must be positive")
     private Long categoryId;
 
-    @NotNull(message = "Image data is required")
-    @Size(min = 1, message = "Image data must not be empty")
-    private byte[] imageData;
+    @NotNull(message = "Image is required")
+    private MultipartFile image;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
-    private String description;
-
-    private Boolean isPrimary;
-
-    @NotBlank(message = "Status is required")
-    @Pattern(regexp = "[0-1]", message = "Status must be '0' or '1'")
     private String status;
 
-    @NotNull(message = "Created date is required")
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
-    private LocalDate modifiedDate;
-
-    @NotBlank(message = "Created by is required")
-    @Size(max = 100, message = "Created by must not exceed 100 characters")
+    private LocalDateTime modifiedDate;
+    @JsonProperty(defaultValue = "admin")
     private String createdBy;
 
-    @Size(max = 100, message = "Modified by must not exceed 100 characters")
     private String modifiedBy;
 }

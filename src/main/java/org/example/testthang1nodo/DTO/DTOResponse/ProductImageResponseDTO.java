@@ -13,8 +13,7 @@ public class ProductImageResponseDTO {
 
     private Long id;
     private Long productId;
-    private String description;
-    private Boolean isPrimary;
+    private String name;
     private String status;
     private LocalDate createdDate;
     private LocalDate modifiedDate;

@@ -1,5 +1,6 @@
 package org.example.testthang1nodo.Entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -10,6 +11,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -25,6 +27,7 @@ public class CategoryImage {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonBackReference
     private Category category;
 
     @NotNull
@@ -32,12 +35,8 @@ public class CategoryImage {
     private byte[] imageData;
 
     @Lob
-    @Column(name = "description")
-    private String description;
-
-    @ColumnDefault("0")
-    @Column(name = "is_primary")
-    private Boolean isPrimary;
+    @Column(name = "name")
+    private String name;
 
     @Size(max = 1)
     @NotNull
@@ -47,10 +46,10 @@ public class CategoryImage {
 
     @NotNull
     @Column(name = "created_date", nullable = false)
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "modified_date")
-    private LocalDate modifiedDate;
+    private LocalDateTime modifiedDate;
 
     @Size(max = 100)
     @NotNull

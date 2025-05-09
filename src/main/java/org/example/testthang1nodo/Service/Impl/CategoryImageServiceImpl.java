@@ -8,12 +8,14 @@ import org.example.testthang1nodo.Repository.CategoryRepository;
 import org.example.testthang1nodo.Repository.CategoryImageRepository;
 import org.example.testthang1nodo.Mapper.CategoryImageMapper;
 import org.example.testthang1nodo.Service.CategoryImageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,18 +25,12 @@ public class CategoryImageServiceImpl implements CategoryImageService {
 
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList("image/jpeg", "image/png");
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-    private final CategoryRepository categoryRepository;
-    private final CategoryImageRepository categoryImageRepository;
-    private final CategoryImageMapper categoryImageMapper;
-
-    public CategoryImageServiceImpl(CategoryRepository categoryRepository,
-                                    CategoryImageRepository categoryImageRepository,
-                                    CategoryImageMapper categoryImageMapper) {
-        this.categoryRepository = categoryRepository;
-        this.categoryImageRepository = categoryImageRepository;
-        this.categoryImageMapper = categoryImageMapper;
-    }
+    @Autowired
+    CategoryRepository categoryRepository;
+    @Autowired
+    CategoryImageRepository categoryImageRepository;
+    @Autowired
+    CategoryImageMapper categoryImageMapper;
 
     @Override
     @Transactional
@@ -52,28 +48,19 @@ public class CategoryImageServiceImpl implements CategoryImageService {
             throw new RuntimeException("Image size exceeds 10MB limit");
         }
 
-        if (isPrimary) {
-            categoryImageRepository.findByCategoryIdAndIsPrimaryAndStatus(categoryId, true, "1")
-                    .forEach(image -> {
-                        image.setStatus("0");
-                        image.setModifiedDate(LocalDate.now());
-                        image.setModifiedBy(createdBy != null ? createdBy : "system");
-                        categoryImageRepository.save(image);
-                    });
-        }
 
         CategoryImageRequestDTO requestDTO = new CategoryImageRequestDTO();
         requestDTO.setCategoryId(categoryId);
-        try {
-            requestDTO.setImageData(file.getBytes());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read image data", e);
-        }
-        requestDTO.setDescription(description);
-        requestDTO.setIsPrimary(isPrimary);
-        requestDTO.setStatus("1");
-        requestDTO.setCreatedDate(LocalDate.now());
-        requestDTO.setCreatedBy(createdBy != null ? createdBy : "system");
+//        try {
+//            requestDTO.setImageData(file.getBytes());
+//        } catch (IOException e) {
+//            throw new RuntimeException("Failed to read image data", e);
+//        }
+//        requestDTO.setDescription(description);
+//        requestDTO.setIsPrimary(isPrimary);
+//        requestDTO.setStatus("1");
+//        requestDTO.setCreatedDate(LocalDate.now());
+//        requestDTO.setCreatedBy(createdBy != null ? createdBy : "system");
 
         CategoryImage image = categoryImageMapper.toEntity(requestDTO);
         image.setCategory(category);
@@ -101,7 +88,7 @@ public class CategoryImageServiceImpl implements CategoryImageService {
         CategoryImage image = categoryImageRepository.findByIdAndStatus(imageId, "1")
                 .orElseThrow(() -> new RuntimeException("Image not found or deleted"));
         image.setStatus("0");
-        image.setModifiedDate(LocalDate.now());
+        image.setModifiedDate(LocalDateTime.now());
         image.setModifiedBy("system");
         categoryImageRepository.save(image);
     }
