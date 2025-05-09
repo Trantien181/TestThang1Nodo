@@ -43,7 +43,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
             @Param("createdFrom") LocalDateTime createdFrom,
             @Param("createdTo") LocalDateTime createdTo,
             Pageable pageable);
-    @Query("SELECT i FROM CategoryImage i WHERE i.category.id IN :categoryIds AND (i.status = '1' OR i.status IS NULL)")
-    List<CategoryImage> findImagesByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
+    @Query("SELECT i FROM CategoryImage i WHERE i.category.id = :categoryIds AND (i.status = '1' OR i.status IS NULL)")
+    List<CategoryImage> findImagesByCategoryIds(@Param("categoryIds") Long categoryId);
 
 }

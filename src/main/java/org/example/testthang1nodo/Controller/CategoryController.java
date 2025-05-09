@@ -9,6 +9,8 @@ import org.example.testthang1nodo.Service.CategoryImageService;
 import org.example.testthang1nodo.Service.CategoryService;
 import org.example.testthang1nodo.Service.Impl.CategoryServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -110,21 +112,34 @@ public class CategoryController {
         return ResponseEntity.ok(response);
     }
     @GetMapping("/export")
-    public ResponseEntity<byte[]> exportCategories(
-            @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "categoryCode", required = false) String categoryCode,
-            @RequestParam(value = "createdFrom", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createdFrom,
-            @RequestParam(value = "createdTo", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createdTo) {
-        logger.info("Exporting categories with params: name={}, categoryCode={}, createdFrom={}, createdTo={}",
-                name, categoryCode, createdFrom, createdTo);
+    public ResponseEntity<Resource> exportCategoriesToExcel(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String categoryCode,
+            @RequestParam(required = false) LocalDateTime createdFrom,
+            @RequestParam(required = false) LocalDateTime createdTo) {
 
-        ByteArrayOutputStream out = categoryService.exportCategoriesToExcel(name, categoryCode, createdFrom, createdTo);
+        // Gọi service để lấy ByteArrayOutputStream
+        ByteArrayOutputStream stream = categoryService.exportCategoriesToExcel(name, categoryCode, createdFrom, createdTo);
+        byte[] bytes = stream.toByteArray();
 
+        // Tạo resource từ bytes
+        ByteArrayResource resource = new ByteArrayResource(bytes);
+
+        // Tạo tên file với timestamp để đảm bảo tên file duy nhất
+        String fileName = "categories_" + LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx";
+
+        // Thiết lập header để trình duyệt hiển thị hộp thoại lưu file
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=categories.xlsx");
-        headers.setContentLength(out.size());
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
+        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+        headers.add(HttpHeaders.PRAGMA, "no-cache");
+        headers.add(HttpHeaders.EXPIRES, "0");
 
-        return new ResponseEntity<>(out.toByteArray(), headers, HttpStatus.OK);
+        // Trả về response với file
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentLength(bytes.length)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 }

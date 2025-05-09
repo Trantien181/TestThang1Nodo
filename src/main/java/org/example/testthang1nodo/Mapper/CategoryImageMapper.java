@@ -6,6 +6,8 @@ import org.example.testthang1nodo.Entity.CategoryImage;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface CategoryImageMapper {
 
@@ -16,4 +18,5 @@ public interface CategoryImageMapper {
 //    @Mapping(target = "id", ignore = true)
 //    @Mapping(target = "category", ignore = true) // Category sẽ được set trong service
     CategoryImage toEntity(CategoryImageRequestDTO requestDTO);
+    List<CategoryImageResponseDTO> toListResponseDTO(List<CategoryImage> categoryImages);
 }

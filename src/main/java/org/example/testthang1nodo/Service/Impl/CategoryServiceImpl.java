@@ -6,6 +6,7 @@ import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
 import org.example.testthang1nodo.Entity.Category;
 import org.example.testthang1nodo.Entity.CategoryImage;
+import org.example.testthang1nodo.Mapper.CategoryImageMapper;
 import org.example.testthang1nodo.Repository.CategoryRepository;
 import org.example.testthang1nodo.Mapper.CategoryMapper;
 import org.example.testthang1nodo.Service.CategoryService;
@@ -32,10 +33,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final CategoryImageMapper categoryImageMapper;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper) {
+    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, CategoryImageMapper categoryImageMapper) {
         this.categoryRepository = categoryRepository;
         this.categoryMapper = categoryMapper;
+        this.categoryImageMapper = categoryImageMapper;
     }
 
     @Override
@@ -122,7 +125,11 @@ public class CategoryServiceImpl implements CategoryService {
         Page<Category> categoryPage = categoryRepository.searchCategories(name, categoryCode, createdFrom, createdTo, pageable);
 
         List<CategoryResponseDTO> data = categoryPage.getContent().stream()
-                .map(categoryMapper::toResponseDTO)
+                .map(category -> {
+                    CategoryResponseDTO response = categoryMapper.toResponseDTO(category);
+                    response.setImages(categoryImageMapper.toListResponseDTO(categoryRepository.findImagesByCategoryIds(response.getId())));
+                    return response;
+                })
                 .collect(Collectors.toList());
 
         CategorySearchResponseDTO.PaginationDTO pagination = new CategorySearchResponseDTO.PaginationDTO(
@@ -145,6 +152,9 @@ public class CategoryServiceImpl implements CategoryService {
         // Lấy tất cả dữ liệu (không phân trang)
         Pageable pageable = Pageable.unpaged();
         Page<Category> categoryPage = categoryRepository.searchCategories(name, categoryCode, createdFrom, createdTo, pageable);
+        for (Category category : categoryPage.getContent()) {
+            category.setImages(categoryRepository.findImagesByCategoryIds(category.getId()));
+        }
         List<Category> categories = categoryPage.getContent();
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -204,7 +214,6 @@ public class CategoryServiceImpl implements CategoryService {
             throw new RuntimeException("Failed to export categories to Excel", e);
         }
     }
-
     @Override
     public List<CategoryResponseDTO> getAllCategories() {
         return categoryRepository.findByStatus("1").stream()
