@@ -20,17 +20,6 @@ import java.util.Optional;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     boolean existsByCategoryCodeAndStatus(String categoryCode, String status);
     Optional<Category> findByIdAndStatus(Long id, String status);
-    @Query("""
-    select distinct c from Category c 
-    left join fetch c.images ci 
-    where c.id = :id and c.status = '1' 
-    and ci.id in (
-        select ci2.id from CategoryImage ci2 
-        where ci2.category.id = c.id and ci2.status = '1'
-    )
-""")
-    Category getCategoryByIdAndStatusAndImagesStatus(@Param("id") Long id);
-    List<Category> findByStatus(String status);
     @Query("SELECT c FROM Category c " +
             "WHERE c.status = '1' " +
             "AND (:name IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
@@ -43,7 +32,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
             @Param("createdFrom") LocalDateTime createdFrom,
             @Param("createdTo") LocalDateTime createdTo,
             Pageable pageable);
-    @Query("SELECT i FROM CategoryImage i WHERE i.category.id = :categoryIds AND (i.status = '1' OR i.status IS NULL)")
-    List<CategoryImage> findImagesByCategoryIds(@Param("categoryIds") Long categoryId);
+    @Query("SELECT i FROM CategoryImage i WHERE i.category.id IN :categoryIds AND (i.status = '1' OR i.status IS NULL)")
+    List<CategoryImage> findImagesByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
 
 }

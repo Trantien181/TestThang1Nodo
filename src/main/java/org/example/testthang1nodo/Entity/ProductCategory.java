@@ -3,7 +3,9 @@ package org.example.testthang1nodo.Entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
@@ -13,6 +15,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "product_category")
 public class ProductCategory {
@@ -47,4 +51,11 @@ public class ProductCategory {
     @Column(name = "modified_by", length = 100)
     private String modifiedBy;
 
+    public ProductCategory(Product product, Category category, LocalDateTime createdDate, String createdBy) {
+        this.id = new ProductCategoryId(product.getId(), category.getId());
+        this.product = product;
+        this.category = category;
+        this.createdDate = createdDate;
+        this.createdBy = createdBy;
+    }
 }

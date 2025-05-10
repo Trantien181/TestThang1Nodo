@@ -2,12 +2,9 @@ package org.example.testthang1nodo.Controller;
 
 import jakarta.validation.Valid;
 import org.example.testthang1nodo.DTO.DTORequest.CategoryRequestDTO;
-import org.example.testthang1nodo.DTO.DTOResponse.CategoryImageResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
-import org.example.testthang1nodo.Service.CategoryImageService;
 import org.example.testthang1nodo.Service.CategoryService;
-import org.example.testthang1nodo.Service.Impl.CategoryServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -16,24 +13,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpHeaders;
 
 import java.io.ByteArrayOutputStream;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {
-    private static final Logger logger = LoggerFactory.getLogger(CategoryServiceImpl.class);
 
     @Autowired
     CategoryService categoryService;
-    @Autowired
-    CategoryImageService categoryImageService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CategoryResponseDTO> createCategory(@Valid @ModelAttribute CategoryRequestDTO requestDTO) {
@@ -50,55 +40,12 @@ public class CategoryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponseDTO> getCategory(@PathVariable Long id) {
-        CategoryResponseDTO response = categoryService.getCategoryById(id);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping
-    public ResponseEntity<List<CategoryResponseDTO>> getAllCategories() {
-        List<CategoryResponseDTO> responses = categoryService.getAllCategories();
-        return ResponseEntity.ok(responses);
-    }
-
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/images")
-    public ResponseEntity<CategoryImageResponseDTO> uploadImage(
-            @PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "isPrimary", defaultValue = "false") boolean isPrimary,
-            @RequestParam(value = "createdBy", defaultValue = "system") String createdBy) {
-        CategoryImageResponseDTO response = categoryImageService.uploadImage(id, file, description, isPrimary, createdBy);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @GetMapping("/{id}/images")
-    public ResponseEntity<List<CategoryImageResponseDTO>> getCategoryImages(@PathVariable Long id) {
-        List<CategoryImageResponseDTO> responses = categoryImageService.getImagesByCategoryId(id);
-        return ResponseEntity.ok(responses);
-    }
-
-    @GetMapping("/images/{imageId}")
-    public ResponseEntity<byte[]> getImageData(@PathVariable Long imageId) {
-        byte[] imageData = categoryImageService.getImageData(imageId);
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG) // Có thể điều chỉnh dựa trên định dạng
-                .body(imageData);
-    }
-
-    @DeleteMapping("/images/{imageId}")
-    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) {
-        categoryImageService.deleteImage(imageId);
-        return ResponseEntity.noContent().build();
-    }
     @GetMapping("/search")
     public ResponseEntity<CategorySearchResponseDTO> searchCategories(
             @RequestParam(value = "name", required = false) String name,

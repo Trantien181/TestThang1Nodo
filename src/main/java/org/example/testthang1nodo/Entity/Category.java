@@ -60,8 +60,12 @@ public class Category {
     @Size(max = 100)
     @Column(name = "modified_by", length = 100)
     private String modifiedBy;
+
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JsonManagedReference
     private List<CategoryImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "category" , fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<ProductCategory> productCategories = new ArrayList<>();
 
 }

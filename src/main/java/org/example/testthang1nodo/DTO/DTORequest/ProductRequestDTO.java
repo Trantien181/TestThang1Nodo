@@ -4,9 +4,11 @@ import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -34,19 +36,18 @@ public class ProductRequestDTO {
     @PositiveOrZero(message = "Quantity must be non-negative")
     private Long quantity;
 
-    @NotBlank(message = "Status is required")
-    @Pattern(regexp = "[0-1]", message = "Status must be '0' or '1'")
     private String status;
 
-    @NotNull(message = "Created date is required")
     private LocalDateTime createdDate;
 
     private LocalDateTime modifiedDate;
 
-    @NotBlank(message = "Created by is required")
-    @Size(max = 100, message = "Created by must not exceed 100 characters")
     private String createdBy;
 
-    @Size(max = 100, message = "Modified by must not exceed 100 characters")
     private String modifiedBy;
+
+    private List<Long> categoryIds;
+
+    private List<MultipartFile> images;
+
 }

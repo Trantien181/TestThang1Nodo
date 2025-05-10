@@ -1,5 +1,6 @@
 package org.example.testthang1nodo.Entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -66,6 +67,11 @@ public class Product {
     @Size(max = 100)
     @Column(name = "modified_by", length = 100)
     private String modifiedBy;
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+
+    @JsonManagedReference
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<ProductImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product" , fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<ProductCategory> productCategories = new ArrayList<>();
 }

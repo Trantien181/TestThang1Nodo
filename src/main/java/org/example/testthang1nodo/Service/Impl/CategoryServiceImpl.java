@@ -1,7 +1,7 @@
 package org.example.testthang1nodo.Service.Impl;
 
-
 import org.example.testthang1nodo.DTO.DTORequest.CategoryRequestDTO;
+import org.example.testthang1nodo.DTO.DTOResponse.CategoryImageResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
 import org.example.testthang1nodo.Entity.Category;
@@ -17,15 +17,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 @Service
 public class CategoryServiceImpl implements CategoryService {
     private static final Logger logger = LoggerFactory.getLogger(CategoryServiceImpl.class);
@@ -42,7 +45,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public CategoryResponseDTO createCategory(CategoryRequestDTO requestDTO) {
         if (categoryRepository.existsByCategoryCodeAndStatus(requestDTO.getCategoryCode(), "1")) {
             throw new RuntimeException("Category code already exists");
@@ -53,11 +56,10 @@ public class CategoryServiceImpl implements CategoryService {
         }
         Category savedCategory = categoryRepository.save(category);
         return categoryMapper.toResponseDTO(savedCategory);
-
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO requestDTO, List<Long> updateImagesID) {
         Category category = categoryRepository.findByIdAndStatus(id, "1")
                 .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
@@ -96,16 +98,11 @@ public class CategoryServiceImpl implements CategoryService {
         category.setModifiedDate(LocalDateTime.now());
         category.setModifiedBy("admin");
         Category updatedCategory = categoryRepository.save(category);
-        return getCategoryById(id);
-    }
-    @Override
-    public CategoryResponseDTO getCategoryById(Long id) {
-        Category category = categoryRepository.getCategoryByIdAndStatusAndImagesStatus(id);
-        category.setImages(category.getImages().stream()
-                .filter(image -> "1".equals(image.getStatus()))
-                .collect(Collectors.toList()));
-
-        return categoryMapper.toResponseDTO(category);
+        List<CategoryImage> updatedImages = category.getImages().stream()
+                .filter(image -> !"0".equals(image.getStatus()))
+                .collect(Collectors.toList());
+        updatedCategory.setImages(updatedImages);
+        return categoryMapper.toResponseDTO(updatedCategory);
     }
 
     @Override
@@ -115,7 +112,12 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
         category.setStatus("0");
         category.setModifiedDate(LocalDateTime.now());
-        category.setModifiedBy("system");
+        category.setModifiedBy("admin");
+        for (CategoryImage categoryImage : category.getImages()) {
+            categoryImage.setStatus("0");
+            categoryImage.setModifiedBy("admin");
+            categoryImage.setModifiedDate(LocalDateTime.now());
+        }
         categoryRepository.save(category);
     }
 
@@ -124,14 +126,31 @@ public class CategoryServiceImpl implements CategoryService {
         Pageable pageable = PageRequest.of(page, size);
         Page<Category> categoryPage = categoryRepository.searchCategories(name, categoryCode, createdFrom, createdTo, pageable);
 
+        // Lấy tất cả ID của category
+        List<Long> categoryIds = categoryPage.getContent().stream()
+                .map(Category::getId)
+                .collect(Collectors.toList());
+
+        // Truy vấn ảnh từ repository -> group theo categoryId (lấy từ entity)
+        Map<Long, List<CategoryImageResponseDTO>> imageMap = categoryRepository.findImagesByCategoryIds(categoryIds)
+                .stream()
+                .filter(image -> image.getCategory() != null && image.getCategory().getId() != null)
+                .collect(Collectors.groupingBy(
+                        image -> image.getCategory().getId(),
+                        Collectors.mapping(categoryImageMapper::toResponseDTO, Collectors.toList())
+                ));
+
+        // Mapping từng category -> CategoryResponseDTO + set images
         List<CategoryResponseDTO> data = categoryPage.getContent().stream()
                 .map(category -> {
                     CategoryResponseDTO response = categoryMapper.toResponseDTO(category);
-                    response.setImages(categoryImageMapper.toListResponseDTO(categoryRepository.findImagesByCategoryIds(response.getId())));
+                    List<CategoryImageResponseDTO> imagesForCategory = imageMap.getOrDefault(category.getId(), new ArrayList<>());
+                    response.setImages(imagesForCategory);
                     return response;
                 })
                 .collect(Collectors.toList());
 
+        // Tạo phần phân trang
         CategorySearchResponseDTO.PaginationDTO pagination = new CategorySearchResponseDTO.PaginationDTO(
                 categoryPage.getNumber(),
                 categoryPage.getSize(),
@@ -152,9 +171,6 @@ public class CategoryServiceImpl implements CategoryService {
         // Lấy tất cả dữ liệu (không phân trang)
         Pageable pageable = Pageable.unpaged();
         Page<Category> categoryPage = categoryRepository.searchCategories(name, categoryCode, createdFrom, createdTo, pageable);
-        for (Category category : categoryPage.getContent()) {
-            category.setImages(categoryRepository.findImagesByCategoryIds(category.getId()));
-        }
         List<Category> categories = categoryPage.getContent();
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -214,10 +230,5 @@ public class CategoryServiceImpl implements CategoryService {
             throw new RuntimeException("Failed to export categories to Excel", e);
         }
     }
-    @Override
-    public List<CategoryResponseDTO> getAllCategories() {
-        return categoryRepository.findByStatus("1").stream()
-                .map(categoryMapper::toResponseDTO)
-                .collect(Collectors.toList());
-    }
+
 }
