@@ -19,6 +19,7 @@ import java.util.List;
 public interface ProductMapper {
 
     // Entity -> Response DTO
+    @Mapping(target = "images", ignore = true)
     ProductResponseDTO toResponseDTO(Product product);
 
     // Request DTO -> Entity
@@ -43,7 +44,6 @@ public interface ProductMapper {
             }catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
         return list;
     }

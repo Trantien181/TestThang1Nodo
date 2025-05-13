@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -32,4 +31,6 @@ public class ProductCategoryRequestDTO {
 
     @Size(max = 100, message = "Modified by must not exceed 100 characters")
     private String modifiedBy;
+
+    private String status;
 }

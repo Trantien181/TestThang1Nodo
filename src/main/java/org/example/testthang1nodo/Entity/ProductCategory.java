@@ -7,10 +7,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -51,11 +51,18 @@ public class ProductCategory {
     @Column(name = "modified_by", length = 100)
     private String modifiedBy;
 
-    public ProductCategory(Product product, Category category, LocalDateTime createdDate, String createdBy) {
+    @Size(max = 1)
+    @NotNull
+    @ColumnDefault("'1'")
+    @Column(name = "status", nullable = false, length = 1)
+    private String status;
+
+    public ProductCategory(Product product, Category category, LocalDateTime createdDate, String createdBy, String status) {
         this.id = new ProductCategoryId(product.getId(), category.getId());
         this.product = product;
         this.category = category;
         this.createdDate = createdDate;
         this.createdBy = createdBy;
+        this.status = status;
     }
 }

@@ -5,7 +5,6 @@ import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
 
 import java.io.ByteArrayOutputStream;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 

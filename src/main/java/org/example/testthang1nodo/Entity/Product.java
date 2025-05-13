@@ -8,7 +8,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,8 +67,9 @@ public class Product {
     @Column(name = "modified_by", length = 100)
     private String modifiedBy;
 
-    @JsonManagedReference
+
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JsonManagedReference
     private List<ProductImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "product" , fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})

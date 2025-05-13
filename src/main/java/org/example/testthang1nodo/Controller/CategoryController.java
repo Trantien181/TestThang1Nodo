@@ -35,7 +35,7 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> updateCategory(
             @PathVariable Long id,
             @Valid @ModelAttribute CategoryRequestDTO requestDTO,
-            @RequestParam(value = "updateImageID") List<Long> updateImageIDs) {
+            @RequestParam(value = "updateImageID", required = false, defaultValue = "") List<Long> updateImageIDs) {
         CategoryResponseDTO response = categoryService.updateCategory(id, requestDTO, updateImageIDs);
         return ResponseEntity.ok(response);
     }
@@ -54,7 +54,6 @@ public class CategoryController {
             @RequestParam(value = "createdTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdTo,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
-        System.out.println(name+": "+categoryCode+": "+createdFrom+": "+createdTo);
         CategorySearchResponseDTO response = categoryService.searchCategories(name, categoryCode, createdFrom, createdTo, page, size);
         return ResponseEntity.ok(response);
     }

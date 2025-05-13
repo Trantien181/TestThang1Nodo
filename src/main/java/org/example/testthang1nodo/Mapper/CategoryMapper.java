@@ -18,6 +18,7 @@ import java.util.List;
 public interface CategoryMapper {
 
     // Entity -> Response DTO
+    @Mapping(target = "images", ignore = true)
     CategoryResponseDTO toResponseDTO(Category category);
 
     // Request DTO -> Entity

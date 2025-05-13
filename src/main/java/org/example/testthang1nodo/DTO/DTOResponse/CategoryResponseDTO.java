@@ -4,9 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.example.testthang1nodo.Entity.CategoryImage;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,4 +24,8 @@ public class CategoryResponseDTO {
     private LocalDateTime modifiedDate;
     private String createdBy;
 
+    public CategoryResponseDTO(Long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
 }

@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,6 +22,8 @@ public class ProductRequestDTO {
 
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
+
+    private List<MultipartFile> images;
 
     @NotNull(message = "Price is required")
     @PositiveOrZero(message = "Price must be non-negative")
@@ -48,6 +49,5 @@ public class ProductRequestDTO {
 
     private List<Long> categoryIds;
 
-    private List<MultipartFile> images;
 
 }

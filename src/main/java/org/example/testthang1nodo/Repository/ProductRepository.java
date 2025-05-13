@@ -1,6 +1,7 @@
 package org.example.testthang1nodo.Repository;
 
 import org.example.testthang1nodo.Entity.Product;
+import org.example.testthang1nodo.Entity.ProductCategory;
 import org.example.testthang1nodo.Entity.ProductImage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,5 +32,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           Pageable pageable);
   @Query("SELECT i FROM ProductImage i WHERE i.product.id IN :productIds AND (i.status = '1' OR i.status IS NULL)")
   List<ProductImage> findImagesByProductIds(@Param("productIds") List<Long> productIds);
+
+  @Query("SELECT pc FROM ProductCategory pc " +
+          "WHERE pc.category.id IN :categoryIds")
+  List<ProductCategory> findProductIdsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
 
 }

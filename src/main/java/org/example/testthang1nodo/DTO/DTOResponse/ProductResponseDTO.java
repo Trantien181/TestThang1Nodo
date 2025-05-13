@@ -1,15 +1,17 @@
 package org.example.testthang1nodo.DTO.DTOResponse;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProductResponseDTO {
 
     private Long id;
@@ -20,8 +22,9 @@ public class ProductResponseDTO {
     private Long quantity;
     private String status;
     private List<CategoryResponseDTO> categories;
+    private String category;
     private List<ProductImageResponseDTO> images;
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
     private String createdBy;
 
 }

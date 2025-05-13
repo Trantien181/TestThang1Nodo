@@ -55,7 +55,11 @@ public class CategoryServiceImpl implements CategoryService {
             categoryImage.setCategory(category);
         }
         Category savedCategory = categoryRepository.save(category);
-        return categoryMapper.toResponseDTO(savedCategory);
+        CategoryResponseDTO categoryResponseDTO = categoryMapper.toResponseDTO(savedCategory);
+        categoryResponseDTO.setImages(savedCategory.getImages().stream()
+                .map(categoryImageMapper::toResponseDTO)
+                .collect(Collectors.toList()));
+        return categoryResponseDTO;
     }
 
     @Override
@@ -70,19 +74,16 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         Category saveCategory = categoryMapper.toEntity(requestDTO);
+
         List<CategoryImage> categoryImages = category.getImages();
+
         List<CategoryImage> newImages = saveCategory.getImages();
-        if (updateImagesID.isEmpty()) {
-            for (CategoryImage categoryImage : categoryImages) {
+
+        for (CategoryImage categoryImage : categoryImages) {
+            if (updateImagesID.isEmpty() || !updateImagesID.contains(categoryImage.getId())) {
                 categoryImage.setStatus("0");
-            }
-        } else {
-            for (CategoryImage categoryImage : categoryImages) {
-                if (!updateImagesID.contains(categoryImage.getId())) {
-                    categoryImage.setStatus("0");
-                    categoryImage.setModifiedBy("admin");
-                    categoryImage.setModifiedDate(LocalDateTime.now());
-                }
+                categoryImage.setModifiedBy("admin");
+                categoryImage.setModifiedDate(LocalDateTime.now());
             }
         }
         if (!newImages.isEmpty()) {
@@ -98,11 +99,13 @@ public class CategoryServiceImpl implements CategoryService {
         category.setModifiedDate(LocalDateTime.now());
         category.setModifiedBy("admin");
         Category updatedCategory = categoryRepository.save(category);
-        List<CategoryImage> updatedImages = category.getImages().stream()
-                .filter(image -> !"0".equals(image.getStatus()))
-                .collect(Collectors.toList());
-        updatedCategory.setImages(updatedImages);
-        return categoryMapper.toResponseDTO(updatedCategory);
+        CategoryResponseDTO responseDTO = categoryMapper.toResponseDTO(updatedCategory);
+        responseDTO.setImages( category.getImages().stream()
+                        .filter(image -> !"0".equals(image.getStatus()))
+                        .map(categoryImageMapper::toResponseDTO)
+                        .collect(Collectors.toList())
+        );
+        return responseDTO;
     }
 
     @Override
