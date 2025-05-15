@@ -2,14 +2,18 @@ package org.example.testthang1nodo.Controller;
 
 import jakarta.validation.Valid;
 import org.example.testthang1nodo.DTO.DTORequest.ProductRequestDTO;
+import org.example.testthang1nodo.DTO.DTOResponse.ApiResponse;
 import org.example.testthang1nodo.DTO.DTOResponse.ProductResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.ProductSearchResponseDTO;
+import org.example.testthang1nodo.Mapper.CategoryMapper;
 import org.example.testthang1nodo.Service.ProductService;
+import org.example.testthang1nodo.Validation.ValidationGroups;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.io.ByteArrayResource;
 import java.io.ByteArrayOutputStream;
@@ -25,11 +29,14 @@ import java.util.List;
 public class ProductController {
     @Autowired
     ProductService productService;
+    @Autowired
+    private CategoryMapper categoryMapper;
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ProductResponseDTO> createProduct(@Valid @ModelAttribute ProductRequestDTO requestDTO) {
-        System.out.println(requestDTO.getImages());
+    public ResponseEntity<ProductResponseDTO> createProduct(
+            @Validated(ValidationGroups.OnCreate.class)
+            @ModelAttribute ProductRequestDTO requestDTO) {
         ProductResponseDTO response = productService.createProduct(requestDTO);
-//        ProductResponseDTO response = new ProductResponseDTO();
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -42,7 +49,7 @@ public class ProductController {
             @RequestParam(value = "categoryIDs", required = false)List<Long> categoryIDs,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
-        ProductSearchResponseDTO response = productService.searchProducts(name, productCode, createdFrom, createdTo,categoryIDs , page, size);
+        ProductSearchResponseDTO response = productService.searchProducts(name, productCode, createdFrom, createdTo, categoryIDs , page, size);
         return ResponseEntity.ok(response);
     }
     @GetMapping("/export")
@@ -76,14 +83,13 @@ public class ProductController {
     @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductResponseDTO> updateProduct(
             @PathVariable Long id,
-            @Valid @ModelAttribute ProductRequestDTO requestDTO,
+            @Validated @ModelAttribute ProductRequestDTO requestDTO,
             @RequestParam(value = "updateImageID", required = false, defaultValue = "") List<Long> updateImageIDs) {
         ProductResponseDTO response = productService.updateProduct(id, requestDTO, updateImageIDs);
         return ResponseEntity.ok(response);
     }
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ApiResponse> deleteProduct(@PathVariable Long id) {
+        return ResponseEntity.ok( productService.deleteProduct(id));
     }
 }

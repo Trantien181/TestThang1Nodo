@@ -14,7 +14,7 @@ import java.util.List;
 
 public interface ProductCategoryRepository extends JpaRepository<ProductCategory, ProductCategoryId> {
   @Query("SELECT new org.example.testthang1nodo.DTO.DTOResponse.ProductCategoryResponseDTO(pc.product.id, c.name) " +
-          "FROM ProductCategory pc JOIN pc.category c WHERE pc.category.id IN :categoryIds")
+          "FROM ProductCategory pc JOIN pc.category c WHERE pc.category.id IN :categoryIds AND pc.status = '1'")
   List<ProductCategoryResponseDTO> findProductCategoriesByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
 
   @Query("SELECT new org.example.testthang1nodo.DTO.DTOResponse.ProductCategoryResponseDTO(pc.product.id, c.name) " +

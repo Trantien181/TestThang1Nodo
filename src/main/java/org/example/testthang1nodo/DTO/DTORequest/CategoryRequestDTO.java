@@ -2,6 +2,8 @@ package org.example.testthang1nodo.DTO.DTORequest;
 
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.example.testthang1nodo.Validation.NotEmptyMultipartList;
+import org.example.testthang1nodo.Validation.ValidationGroups;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -15,17 +17,19 @@ public class CategoryRequestDTO {
 
     private Long id;
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 255, message = "Name must not exceed 255 characters")
+    @NotBlank(message = "{category.name.required}", groups = ValidationGroups.OnCreate.class)
+    @Size(max = 100, message = "{category.name.too.long}")
     private String name;
 
-    @NotBlank(message = "Category code is required")
-    @Size(max = 50, message = "Category code must not exceed 50 characters")
+    @NotBlank(message = "{category.code.required}", groups = ValidationGroups.OnCreate.class)
+    @Size(max = 50, message = "{category.code.too.long}")
     private String categoryCode;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @NotBlank(message = "{category.description.required}", groups = ValidationGroups.OnCreate.class)
+    @Size(max = 200, message = "{category.description.too.long}")
     private String description;
 
+    @NotEmptyMultipartList(message = "{category.images.required}", groups = ValidationGroups.OnCreate.class)
     private List<MultipartFile> images;
 
     private String status;

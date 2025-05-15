@@ -19,17 +19,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   boolean existsByProductCodeAndStatus(String productCode, String status);
   Optional<Product> findByIdAndStatus(Long id, String status);
   @Query("SELECT p FROM Product p " +
+          "LEFT JOIN p.productCategories pc " +
           "WHERE p.status = '1' " +
+          "AND (:categoryIds IS NULL OR pc.category.id IN :categoryIds) " +
           "AND (:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
           "AND (:productCode IS NULL OR p.productCode = :productCode) " +
           "AND (:createdFrom IS NULL OR p.createdDate >= :createdFrom) " +
           "AND (:createdTo IS NULL OR p.createdDate <= :createdTo)")
-  Page<Product> searchProducts(
-          @Param("name") String name,
-          @Param("productCode") String productCode,
-          @Param("createdFrom") LocalDateTime createdFrom,
-          @Param("createdTo") LocalDateTime createdTo,
-          Pageable pageable);
+  Page<Product> searchProducts(@Param("name") String name,
+                               @Param("productCode") String productCode,
+                               @Param("createdFrom") LocalDateTime createdFrom,
+                               @Param("createdTo") LocalDateTime createdTo,
+                               @Param("categoryIds") List<Long> categoryIds,
+                               Pageable pageable);
   @Query("SELECT i FROM ProductImage i WHERE i.product.id IN :productIds AND (i.status = '1' OR i.status IS NULL)")
   List<ProductImage> findImagesByProductIds(@Param("productIds") List<Long> productIds);
 

@@ -2,9 +2,11 @@ package org.example.testthang1nodo.Controller;
 
 import jakarta.validation.Valid;
 import org.example.testthang1nodo.DTO.DTORequest.CategoryRequestDTO;
+import org.example.testthang1nodo.DTO.DTOResponse.ApiResponse;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
 import org.example.testthang1nodo.Service.CategoryService;
+import org.example.testthang1nodo.Validation.ValidationGroups;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -12,6 +14,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpHeaders;
 
@@ -26,7 +29,7 @@ public class CategoryController {
     CategoryService categoryService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CategoryResponseDTO> createCategory(@Valid @ModelAttribute CategoryRequestDTO requestDTO) {
+    public ResponseEntity<CategoryResponseDTO> createCategory(@Validated(ValidationGroups.OnCreate.class) @ModelAttribute CategoryRequestDTO requestDTO) {
         CategoryResponseDTO response = categoryService.createCategory(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -34,16 +37,15 @@ public class CategoryController {
     @PutMapping("/{id}")
     public ResponseEntity<CategoryResponseDTO> updateCategory(
             @PathVariable Long id,
-            @Valid @ModelAttribute CategoryRequestDTO requestDTO,
+            @Validated(ValidationGroups.OnUpdate.class) @ModelAttribute CategoryRequestDTO requestDTO,
             @RequestParam(value = "updateImageID", required = false, defaultValue = "") List<Long> updateImageIDs) {
         CategoryResponseDTO response = categoryService.updateCategory(id, requestDTO, updateImageIDs);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
-        categoryService.deleteCategory(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ApiResponse> deleteCategory(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.deleteCategory(id));
     }
 
     @GetMapping("/search")

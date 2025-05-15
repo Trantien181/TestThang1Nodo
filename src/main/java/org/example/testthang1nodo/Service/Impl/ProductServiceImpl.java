@@ -1,10 +1,14 @@
 package org.example.testthang1nodo.Service.Impl;
 
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.example.testthang1nodo.DTO.DTORequest.ProductRequestDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.*;
 import org.example.testthang1nodo.Entity.*;
+import org.example.testthang1nodo.Exception.AppException;
+import org.example.testthang1nodo.Exception.ErrorCode;
 import org.example.testthang1nodo.Mapper.CategoryMapper;
 import org.example.testthang1nodo.Mapper.ProductImageMapper;
 import org.example.testthang1nodo.Mapper.ProductMapper;
@@ -18,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -57,12 +60,14 @@ public class ProductServiceImpl implements ProductService {
     private EntityManager entityManager;
     @Autowired
     private ProductImageRepository productImageRepository;
+    @Autowired
+    MessageSource messageSource;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Throwable.class)
     public ProductResponseDTO createProduct(ProductRequestDTO requestDTO) {
         if (productRepository.existsByProductCodeAndStatus(requestDTO.getProductCode(), "1")) {
-            throw new RuntimeException("Product code already exists");
+            throw new AppException(ErrorCode.PRODUCT_CODE_EXISTS);
         }
         Product product = productMapper.toEntity(requestDTO);
         for (ProductImage productImage : product.getImages()) {
@@ -74,7 +79,7 @@ public class ProductServiceImpl implements ProductService {
         List<ProductCategory> productCategories = new ArrayList<>();
         for (Long categoryID : requestDTO.getCategoryIds()) {
             Category category = categoryRepository.findByIdAndStatus(categoryID, "1")
-                    .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
+                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
             categories.add(new CategoryResponseDTO(categoryID, category.getName()));
             ProductCategory productCategory = new ProductCategory(product, category, LocalDateTime.now(), "admin", "1");
             productCategories.add(productCategory);
@@ -88,14 +93,14 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Throwable.class)
     public ProductResponseDTO updateProduct(Long id, ProductRequestDTO requestDTO, List<Long> updateImagesID) {
         Product product = productRepository.findByIdAndStatus(id, "1")
-                .orElseThrow(() -> new RuntimeException("Product with ID " + id + " not found or already deleted"));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
         // Kiểm tra productCode trùng lặp
         if (!product.getProductCode().equals(requestDTO.getProductCode()) &&
                 productRepository.existsByProductCodeAndStatus(requestDTO.getProductCode(), "1")) {
-            throw new RuntimeException("Product code '" + requestDTO.getProductCode() + "' already exists");
+            throw new AppException(ErrorCode.PRODUCT_CODE_EXISTS);
         }
         // Xử lý ProductImage
         List<ProductImage> newImages = productMapper.toEntity(requestDTO).getImages();
@@ -118,7 +123,7 @@ public class ProductServiceImpl implements ProductService {
         List<ProductCategory> existingCategories = productCategoryRepository.findByProductId(id);
         //  Xử lý ảnh mới
         if (!newImages.isEmpty()) {
-            System.out.println("đã chạy voà đây");
+            System.out.println("đã chạy vào đây");
             for (ProductImage newImage : newImages) {
                 newImage.setProduct(product);
                 existingImages.add(newImage);
@@ -126,11 +131,21 @@ public class ProductServiceImpl implements ProductService {
         }
         product.setImages(existingImages);
         // Cập nhật các thông tin cơ bản của Product
-        product.setName(requestDTO.getName());
-        product.setProductCode(requestDTO.getProductCode());
-        product.setDescription(requestDTO.getDescription());
-        product.setPrice(requestDTO.getPrice());
-        product.setQuantity(requestDTO.getQuantity());
+        if (requestDTO.getName() != null && !requestDTO.getName().isBlank()) {
+            product.setName(requestDTO.getName());
+        }
+        if (requestDTO.getProductCode() != null && !requestDTO.getProductCode().isBlank()) {
+            product.setProductCode(requestDTO.getProductCode());
+        }
+        if (requestDTO.getDescription() != null && !requestDTO.getDescription().isBlank()) {
+            product.setDescription(requestDTO.getDescription());
+        }
+        if (requestDTO.getPrice() != null) {
+            product.setPrice(requestDTO.getPrice());
+        }
+        if (requestDTO.getQuantity() != null) {
+            product.setQuantity(requestDTO.getQuantity());
+        }
         product.setModifiedDate(LocalDateTime.now());
         product.setModifiedBy("admin");
         // Xử lý ProductCategory mới
@@ -143,7 +158,7 @@ public class ProductServiceImpl implements ProductService {
         if (!categoryIdsToFetch.isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(categoryIdsToFetch);
             if (categories.size() != categoryIdsToFetch.size()) {
-                throw new RuntimeException("One or more categories not found or inactive");
+                throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
             }
             for (Category category : categories) {
                 ProductCategory productCategory = new ProductCategory(
@@ -154,7 +169,7 @@ public class ProductServiceImpl implements ProductService {
         product.setProductCategories(existingCategories);
         Product updatedProduct = productRepository.save(product);
         ProductResponseDTO responseDTO = productMapper.toResponseDTO(updatedProduct);
-        responseDTO.setImages(existingImages.stream()
+        responseDTO.setImages(updatedProduct.getImages().stream()
                 .filter(image -> !"0".equals(image.getStatus()))
                 .map(productImageMapper::toResponseDTO)
                 .collect(Collectors.toList()));
@@ -169,9 +184,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void deleteProduct(Long id) {
+    public ApiResponse deleteProduct(Long id) {
         Product product = productRepository.findByIdAndStatus(id, "1")
-                .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
         product.setStatus("0");
         product.setModifiedDate(LocalDateTime.now());
         product.setModifiedBy("admin");
@@ -182,73 +197,67 @@ public class ProductServiceImpl implements ProductService {
                 "admin"
         );
         productRepository.save(product);
+        // Tạo thông điệp i18n
+        String message = messageSource.getMessage(
+                "product.delete.success",
+                null,
+                "Product deleted successfully",
+                LocaleContextHolder.getLocale()
+        );
+        System.out.println("message"+message);
+        // Trả về ApiResponseDTO
+        ApiResponse response = new ApiResponse();
+        response.setCode("DELETE_SUCCESS");
+        response.setMessage(message);
+        return response;
     }
 
     @Override
-    public ProductSearchResponseDTO searchProducts(String name, String productCode, LocalDateTime createdFrom, LocalDateTime createdTo, List<Long> categoryIds, int page, int size) {
+    public ProductSearchResponseDTO searchProducts(String name, String productCode, LocalDateTime createdFrom,
+                                                   LocalDateTime createdTo, List<Long> categoryIds, int page, int size) {
+        // Kiểm tra tính hợp lệ của createdFrom và createdTo
+        if (createdFrom != null && createdFrom.isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.CATEGORY_SEARCH_FROM_AFTER_NOW);
+        }
+        if (createdTo != null && createdTo.isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.CATEGORY_SEARCH_TO_AFTER_NOW);
+        }
+        if (createdFrom != null && createdTo != null && createdFrom.isAfter(createdTo)) {
+            throw new AppException(ErrorCode.CATEGORY_SREACH_CREATED_NOT_VALID);
+        }
+
+        // Tạo Pageable cho phân trang
         Pageable pageable = PageRequest.of(page, size);
 
         // Tìm kiếm sản phẩm
-        Page<Product> productPage = productRepository.searchProducts(name, productCode, createdFrom, createdTo, pageable);
+        Page<Product> productPage = productRepository.searchProducts(name, productCode, createdFrom, createdTo,
+                categoryIds, pageable);
         List<Product> products = productPage.getContent();
         List<Long> productIds = products.stream()
                 .map(Product::getId)
                 .collect(Collectors.toList());
         logger.info("All product IDs: {}", productIds);
 
-        // Lấy danh sách ProductCategoryDTO
-        List<ProductCategoryResponseDTO> productCategoryDTOs;
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            logger.info("Category IDs: {}", categoryIds);
-            productCategoryDTOs = productCategoryRepository.findProductCategoriesByCategoryIds(categoryIds);
-        } else {
-            logger.info("No category IDs provided, fetching all categories for products");
-            productCategoryDTOs = productCategoryRepository.findProductCategoriesByProductIds(productIds);
+        // Nếu không có sản phẩm, trả về kết quả rỗng
+        if (products.isEmpty()) {
+            logger.info("No products found");
+            return new ProductSearchResponseDTO(
+                    List.of(),
+                    new ProductSearchResponseDTO.PaginationDTO(0, size, 0, 0, false, false)
+            );
         }
+
+        // Lấy danh sách ProductCategoryDTO cho các productIds
+        List<ProductCategoryResponseDTO> productCategoryDTOs = productCategoryRepository
+                .findProductCategoriesByProductIds(productIds);
         logger.info("ProductCategoryDTOs: {}", productCategoryDTOs);
 
         // Tạo Map<productId, categoryName>
         Map<Long, String> productCategoryMap = productCategoryDTOs.stream()
                 .collect(Collectors.groupingBy(
                         ProductCategoryResponseDTO::getProductId,
-                        Collectors.mapping(
-                                ProductCategoryResponseDTO::getCategoryName,
-                                Collectors.joining(", ")
-                        )
+                        Collectors.mapping(ProductCategoryResponseDTO::getCategoryName, Collectors.joining(", "))
                 ));
-
-        // Lọc sản phẩm nếu có categoryIds
-        List<Product> filteredProducts;
-        long totalElements;
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            List<Long> filteredProductIds = productCategoryDTOs.stream()
-                    .map(ProductCategoryResponseDTO::getProductId)
-                    .distinct()
-                    .collect(Collectors.toList());
-            logger.info("Filtered product IDs for categoryIds {}: {}", categoryIds, filteredProductIds);
-
-            if (filteredProductIds.isEmpty()) {
-                logger.info("No products found for categoryIds {}", categoryIds);
-                return new ProductSearchResponseDTO(
-                        List.of(),
-                        new ProductSearchResponseDTO.PaginationDTO(0, size, 0, 0, false, false)
-                );
-            }
-
-            filteredProducts = products.stream()
-                    .filter(product -> filteredProductIds.contains(product.getId()))
-                    .collect(Collectors.toList());
-            totalElements = filteredProducts.size();
-            logger.info("Filtered products: {}", filteredProducts.stream().map(Product::getId).collect(Collectors.toList()));
-        } else {
-            filteredProducts = products;
-            totalElements = productPage.getTotalElements();
-        }
-
-        // Tạo lại Page
-        Page<Product> finalProductPage = (categoryIds != null && !categoryIds.isEmpty())
-                ? new PageImpl<>(filteredProducts, pageable, totalElements)
-                : productPage;
 
         // Lấy danh sách ảnh sản phẩm
         Map<Long, List<ProductImageResponseDTO>> imageMap = productRepository.findImagesByProductIds(productIds)
@@ -260,7 +269,7 @@ public class ProductServiceImpl implements ProductService {
                 ));
 
         // Ánh xạ sản phẩm sang DTO
-        List<ProductResponseDTO> data = filteredProducts.stream()
+        List<ProductResponseDTO> data = products.stream()
                 .map(product -> {
                     ProductResponseDTO response = productMapper.toResponseDTO(product);
                     response.setImages(imageMap.getOrDefault(product.getId(), new ArrayList<>()));
@@ -271,13 +280,18 @@ public class ProductServiceImpl implements ProductService {
 
         // Tạo thông tin phân trang
         ProductSearchResponseDTO.PaginationDTO pagination = new ProductSearchResponseDTO.PaginationDTO(
-                finalProductPage.getNumber(),
-                finalProductPage.getSize(),
-                totalElements,
-                finalProductPage.getTotalPages(),
-                finalProductPage.hasNext(),
-                finalProductPage.hasPrevious()
+                productPage.getNumber(),
+                productPage.getSize(),
+                productPage.getTotalElements(),
+                productPage.getTotalPages(),
+                productPage.hasNext(),
+                productPage.hasPrevious()
         );
+
+        // Kiểm tra nếu không có sản phẩm
+        if (pagination.getTotalElements() == 0) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
 
         return new ProductSearchResponseDTO(data, pagination);
     }
@@ -285,57 +299,41 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    public ByteArrayOutputStream exportProductsToExcel(String name, String productCode, LocalDateTime createdFrom, LocalDateTime createdTo, List<Long> categoryIds) {
+    public ByteArrayOutputStream exportProductsToExcel(String name, String productCode, LocalDateTime createdFrom,
+                                                       LocalDateTime createdTo, List<Long> categoryIds) {
+        // Kiểm tra tính hợp lệ của createdFrom và createdTo
+        if (createdFrom != null && createdFrom.isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.CATEGORY_SEARCH_FROM_AFTER_NOW);
+        }
+        if (createdTo != null && createdTo.isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.CATEGORY_SEARCH_TO_AFTER_NOW);
+        }
+        if (createdFrom != null && createdTo != null && createdFrom.isAfter(createdTo)) {
+            throw new AppException(ErrorCode.CATEGORY_SREACH_CREATED_NOT_VALID);
+        }
+
         // Tìm kiếm sản phẩm (không phân trang)
-        List<Product> products = productRepository.searchProducts(name, productCode, createdFrom, createdTo, null)
-                .getContent();
+        List<Product> products = productRepository.searchProducts(name, productCode, createdFrom, createdTo,
+                categoryIds, null).getContent();
+        if (products.isEmpty()) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
         List<Long> productIds = products.stream()
                 .map(Product::getId)
                 .collect(Collectors.toList());
         logger.info("All product IDs for export: {}", productIds);
 
-        // Lấy danh sách ProductCategoryDTO
-        List<ProductCategoryResponseDTO> productCategoryDTOs;
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            logger.info("Category IDs for export: {}", categoryIds);
-            productCategoryDTOs = productCategoryRepository.findProductCategoriesByCategoryIds(categoryIds);
-        } else {
-            logger.info("No category IDs provided for export, fetching all categories for products");
-            productCategoryDTOs = productCategoryRepository.findProductCategoriesByProductIds(productIds);
-        }
+        // Lấy danh sách ProductCategoryDTO cho các productIds
+        List<ProductCategoryResponseDTO> productCategoryDTOs = productCategoryRepository
+                .findProductCategoriesByProductIds(productIds);
         logger.info("ProductCategoryDTOs for export: {}", productCategoryDTOs);
 
         // Tạo Map<productId, categoryName>
         Map<Long, String> productCategoryMap = productCategoryDTOs.stream()
                 .collect(Collectors.groupingBy(
                         ProductCategoryResponseDTO::getProductId,
-                        Collectors.mapping(
-                                ProductCategoryResponseDTO::getCategoryName,
-                                Collectors.joining(", ")
-                        )
+                        Collectors.mapping(ProductCategoryResponseDTO::getCategoryName, Collectors.joining(", "))
                 ));
-
-        // Lọc sản phẩm nếu có categoryIds
-        List<Product> filteredProducts;
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            List<Long> filteredProductIds = productCategoryDTOs.stream()
-                    .map(ProductCategoryResponseDTO::getProductId)
-                    .distinct()
-                    .collect(Collectors.toList());
-            logger.info("Filtered product IDs for categoryIds {}: {}", categoryIds, filteredProductIds);
-
-            if (filteredProductIds.isEmpty()) {
-                logger.info("No products found for categoryIds {} for export", categoryIds);
-                filteredProducts = new ArrayList<>();
-            } else {
-                filteredProducts = products.stream()
-                        .filter(product -> filteredProductIds.contains(product.getId()))
-                        .collect(Collectors.toList());
-                logger.info("Filtered products for export: {}", filteredProducts.stream().map(Product::getId).collect(Collectors.toList()));
-            }
-        } else {
-            filteredProducts = products;
-        }
 
         // Tạo workbook Excel
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -363,8 +361,8 @@ public class ProductServiceImpl implements ProductService {
 
             // Ghi dữ liệu sản phẩm
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            for (int i = 0; i < filteredProducts.size(); i++) {
-                Product product = filteredProducts.get(i);
+            for (int i = 0; i < products.size(); i++) {
+                Product product = products.get(i);
                 Row row = sheet.createRow(i + 1);
 
                 row.createCell(0).setCellValue(product.getId());
@@ -380,8 +378,12 @@ public class ProductServiceImpl implements ProductService {
                     createdDateCell.setCellStyle(dateStyle);
                 }
 
-                // Ngày sửa (giả định không có updatedDate, để trống)
-                row.createCell(6).setCellValue("");
+                // Ngày sửa
+                Cell modifiedDateCell = row.createCell(6);
+                if (product.getModifiedDate() != null) {
+                    modifiedDateCell.setCellValue(product.getModifiedDate().format(formatter));
+                    modifiedDateCell.setCellStyle(dateStyle);
+                }
 
                 // Danh mục
                 row.createCell(7).setCellValue(productCategoryMap.getOrDefault(product.getId(), ""));
@@ -399,7 +401,7 @@ public class ProductServiceImpl implements ProductService {
 
         } catch (IOException e) {
             logger.error("Error exporting products to Excel", e);
-            throw new RuntimeException("Failed to export products to Excel", e);
+            throw new AppException(ErrorCode.EXPORT_ERROR);
         }
     }
 }

@@ -4,6 +4,9 @@ import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.testthang1nodo.Validation.NotEmptyLongList;
+import org.example.testthang1nodo.Validation.NotEmptyMultipartList;
+import org.example.testthang1nodo.Validation.ValidationGroups;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -16,25 +19,24 @@ public class ProductRequestDTO {
 
     private Long id;
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 255, message = "Name must not exceed 255 characters")
+    @NotBlank(message = "{product.name.required}", groups = ValidationGroups.OnCreate.class)
+    @Size(max = 200, message = "{product.name.too.long}")
     private String name;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @NotBlank(message = "{product.description.required}", groups = ValidationGroups.OnCreate.class)
+    @Size(max = 200, message = "{product.description.too.long}")
     private String description;
 
-    private List<MultipartFile> images;
-
-    @NotNull(message = "Price is required")
-    @PositiveOrZero(message = "Price must be non-negative")
+    @NotNull(message = "{product.price.required}", groups = ValidationGroups.OnCreate.class)
+    @PositiveOrZero(message = "{product.price.invalid}")
     private Double price;
 
-    @NotBlank(message = "Product code is required")
-    @Size(max = 50, message = "Product code must not exceed 50 characters")
+    @NotBlank(message = "{product.code.required}", groups = ValidationGroups.OnCreate.class)
+    @Size(max = 50, message = "{product.code.too.long}")
     private String productCode;
 
-    @NotNull(message = "Quantity is required")
-    @PositiveOrZero(message = "Quantity must be non-negative")
+    @NotNull(message = "{product.quantity.required}", groups = ValidationGroups.OnCreate.class)
+    @PositiveOrZero(message = "{product.quantity.invalid}")
     private Long quantity;
 
     private String status;
@@ -47,7 +49,9 @@ public class ProductRequestDTO {
 
     private String modifiedBy;
 
+    @NotEmptyLongList(message = "{product.categories.required}")
     private List<Long> categoryIds;
 
-
+    @NotEmptyMultipartList(message = "{category.images.required}", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
+    private List<MultipartFile> images;
 }

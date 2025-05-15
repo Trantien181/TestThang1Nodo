@@ -1,15 +1,21 @@
 package org.example.testthang1nodo.Service.Impl;
 
 import org.example.testthang1nodo.DTO.DTORequest.CategoryRequestDTO;
+import org.example.testthang1nodo.DTO.DTOResponse.ApiResponse;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryImageResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategoryResponseDTO;
 import org.example.testthang1nodo.DTO.DTOResponse.CategorySearchResponseDTO;
 import org.example.testthang1nodo.Entity.Category;
 import org.example.testthang1nodo.Entity.CategoryImage;
+import org.example.testthang1nodo.Exception.AppException;
+import org.example.testthang1nodo.Exception.ErrorCode;
 import org.example.testthang1nodo.Mapper.CategoryImageMapper;
+import org.example.testthang1nodo.Repository.CategoryImageRepository;
 import org.example.testthang1nodo.Repository.CategoryRepository;
 import org.example.testthang1nodo.Mapper.CategoryMapper;
 import org.example.testthang1nodo.Service.CategoryService;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,18 +43,23 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
     private final CategoryImageMapper categoryImageMapper;
+    private final CategoryImageRepository categoryImageRepository;
+    private final MessageSource messageSource;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, CategoryImageMapper categoryImageMapper) {
+
+    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, CategoryImageMapper categoryImageMapper, CategoryImageRepository categoryImageRepository, MessageSource messageSource) {
         this.categoryRepository = categoryRepository;
         this.categoryMapper = categoryMapper;
         this.categoryImageMapper = categoryImageMapper;
+        this.categoryImageRepository = categoryImageRepository;
+        this.messageSource = messageSource;
     }
 
     @Override
     @Transactional(rollbackFor = IOException.class)
     public CategoryResponseDTO createCategory(CategoryRequestDTO requestDTO) {
         if (categoryRepository.existsByCategoryCodeAndStatus(requestDTO.getCategoryCode(), "1")) {
-            throw new RuntimeException("Category code already exists");
+            throw new AppException(ErrorCode.CATEGORY_CODE_EXISTS);
         }
         Category category = categoryMapper.toEntity(requestDTO);
         for (CategoryImage categoryImage : category.getImages()) {
@@ -63,14 +74,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Transactional(rollbackFor = IOException.class)
+    @Transactional(rollbackFor = Throwable.class)
     public CategoryResponseDTO updateCategory(Long id, CategoryRequestDTO requestDTO, List<Long> updateImagesID) {
         Category category = categoryRepository.findByIdAndStatus(id, "1")
-                .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
         if (!category.getCategoryCode().equals(requestDTO.getCategoryCode()) &&
                 categoryRepository.existsByCategoryCodeAndStatus(requestDTO.getCategoryCode(), "1")) {
-            throw new RuntimeException("Category code already exists");
+            throw new AppException(ErrorCode.CATEGORY_CODE_EXISTS);
         }
 
         Category saveCategory = categoryMapper.toEntity(requestDTO);
@@ -93,9 +104,15 @@ public class CategoryServiceImpl implements CategoryService {
                 categoryImages.add(newImage);
             }
         }
-        category.setName(requestDTO.getName());
-        category.setCategoryCode(requestDTO.getCategoryCode());
-        category.setDescription(requestDTO.getDescription());
+        if (requestDTO.getName() != null && !requestDTO.getName().isBlank()) {
+            category.setName(requestDTO.getName());
+        }
+        if (requestDTO.getCategoryCode() != null && !requestDTO.getCategoryCode().isBlank()) {
+            category.setCategoryCode(requestDTO.getCategoryCode());
+        }
+        if (requestDTO.getDescription() != null && !requestDTO.getDescription().isBlank()) {
+            category.setDescription(requestDTO.getDescription());
+        }
         category.setModifiedDate(LocalDateTime.now());
         category.setModifiedBy("admin");
         Category updatedCategory = categoryRepository.save(category);
@@ -110,22 +127,43 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public void deleteCategory(Long id) {
+    public ApiResponse deleteCategory(Long id) {
         Category category = categoryRepository.findByIdAndStatus(id, "1")
-                .orElseThrow(() -> new RuntimeException("Category not found or deleted"));
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         category.setStatus("0");
         category.setModifiedDate(LocalDateTime.now());
         category.setModifiedBy("admin");
-        for (CategoryImage categoryImage : category.getImages()) {
-            categoryImage.setStatus("0");
-            categoryImage.setModifiedBy("admin");
-            categoryImage.setModifiedDate(LocalDateTime.now());
-        }
+        categoryImageRepository.softDeleteImagesBycategoryId(
+                category.getId(),
+                "0",
+                LocalDateTime.now(),
+                "admin");
         categoryRepository.save(category);
+        // Tạo thông điệp i18n
+        String message = messageSource.getMessage(
+                "category.delete.success",
+                null,
+                "Category deleted successfully",
+                LocaleContextHolder.getLocale()
+        );
+        System.out.println("message"+message);
+        // Trả về ApiResponseDTO
+        ApiResponse response = new ApiResponse();
+        response.setCode("DELETE_SUCCESS");
+        response.setMessage(message);
+        return response;
     }
 
     @Override
     public CategorySearchResponseDTO searchCategories(String name, String categoryCode, LocalDateTime createdFrom, LocalDateTime createdTo, int page, int size) {
+        if (createdFrom != null && createdFrom.isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.CATEGORY_SEARCH_FROM_AFTER_NOW);
+        }
+        if (createdFrom!= null && createdTo != null) {
+            if (createdFrom.isAfter(createdTo)) {
+                throw new AppException(ErrorCode.CATEGORY_SREACH_CREATED_NOT_VALID);
+            }
+        }
         Pageable pageable = PageRequest.of(page, size);
         Page<Category> categoryPage = categoryRepository.searchCategories(name, categoryCode, createdFrom, createdTo, pageable);
 
@@ -162,12 +200,22 @@ public class CategoryServiceImpl implements CategoryService {
                 categoryPage.hasNext(),
                 categoryPage.hasPrevious()
         );
-
+        if (pagination.getTotalElements() == 0){
+            throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
+        }
         return new CategorySearchResponseDTO(data, pagination);
     }
 
     @Override
     public ByteArrayOutputStream exportCategoriesToExcel(String name, String categoryCode, LocalDateTime createdFrom, LocalDateTime createdTo) {
+        if (createdFrom != null && createdFrom.isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.CATEGORY_SEARCH_FROM_AFTER_NOW);
+        }
+        if (createdFrom!= null && createdTo != null) {
+            if (createdFrom.isAfter(createdTo)) {
+                throw new AppException(ErrorCode.CATEGORY_SREACH_CREATED_NOT_VALID);
+            }
+        }
         logger.debug("Exporting categories to Excel with params: name={}, categoryCode={}, createdFrom={}, createdTo={}",
                 name, categoryCode, createdFrom, createdTo);
 
@@ -175,7 +223,9 @@ public class CategoryServiceImpl implements CategoryService {
         Pageable pageable = Pageable.unpaged();
         Page<Category> categoryPage = categoryRepository.searchCategories(name, categoryCode, createdFrom, createdTo, pageable);
         List<Category> categories = categoryPage.getContent();
-
+        if (categories.isEmpty()) {
+            throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
+        }
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Categories");
 
@@ -230,7 +280,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         } catch (IOException e) {
             logger.error("Error exporting categories to Excel", e);
-            throw new RuntimeException("Failed to export categories to Excel", e);
+            throw new AppException(ErrorCode.EXPORT_ERROR);
         }
     }
 
